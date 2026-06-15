@@ -73,6 +73,42 @@ def build_prompt(diff_content, files, truncated):
 请保持简洁，重点突出。"""
 
 
+def review_with_nim(prompt):
+    """使用 NVIDIA NIM 免费模型进行审查（首选）"""
+    api_key = os.environ.get('NIM_API_KEY')
+    model = os.environ.get('NIM_MODEL', 'meta/llama-3.1-8b-instruct')
+
+    if not api_key:
+        print("⚪ NVIDIA NIM API Key 未配置（检查 GitHub Secrets: NIM_API_KEY）")
+        return None
+
+    print(f"🔑 NIM API Key: {api_key[:8]}... (长度: {len(api_key)})")
+    print(f"🤖 使用模型: {model}")
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://integrate.api.nvidia.com/v1",
+        )
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2000,
+            temperature=0.3
+        )
+        print(f"✅ NVIDIA NIM ({model}) 审查成功")
+        return response.choices[0].message.content
+    except ImportError as e:
+        print(f"❌ OpenAI 依赖未安装: {e}")
+        print("   请确保安装了 openai: pip install openai")
+        return None
+    except Exception as e:
+        print(f"❌ NVIDIA NIM 审查失败: {e}")
+        traceback.print_exc()
+        return None
+
+
 def review_with_gemini(prompt):
     """使用 Gemini API 进行审查"""
     api_key = os.environ.get('GEMINI_API_KEY')
@@ -144,20 +180,25 @@ def review_with_openai(prompt):
 
 
 def ai_review(diff_content, files, truncated):
-    """调用 AI 进行代码审查，优先 Gemini，失败后尝试 OpenAI"""
+    """调用 AI 进行代码审查，优先级：NVIDIA NIM > Gemini > OpenAI"""
     prompt = build_prompt(diff_content, files, truncated)
-    
-    # 1. 优先尝试 Gemini
+
+    # 1. 优先尝试 NVIDIA NIM（免费模型）
+    result = review_with_nim(prompt)
+    if result:
+        return result
+
+    # 2. NIM 不可用，尝试 Gemini
     result = review_with_gemini(prompt)
     if result:
         return result
-    
-    # 2. Gemini 失败，尝试 OpenAI 兼容接口
+
+    # 3. Gemini 也失败，尝试 OpenAI 兼容接口
     print("尝试使用 OpenAI 兼容接口...")
     result = review_with_openai(prompt)
     if result:
         return result
-    
+
     return None
 
 

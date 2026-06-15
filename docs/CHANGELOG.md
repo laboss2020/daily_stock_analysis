@@ -5,6 +5,17 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 新增
+- 🤖 **NVIDIA NIM 免费模型支持**
+  - 新增 NVIDIA NIM 作为首选 AI 模型（免费额度）
+  - 支持的免费模型：`meta/llama-3.1-8b-instruct`、`mistralai/mistral-7b-instruct-v0.3`、`nvidia/llama-3.1-nemotron-8b` 等
+  - API 地址：`https://integrate.api.nvidia.com/v1`（OpenAI 兼容格式）
+  - 优先级调整为：NVIDIA NIM > Gemini > OpenAI
+  - 新增环境变量：`NIM_API_KEY`、`NIM_MODEL`、`NIM_TEMPERATURE`
+  - GitHub Actions workflow 和 PR Review 同步支持 NIM
+
 ## [2.1.0] - 2026-01-25
 
 ### 新增

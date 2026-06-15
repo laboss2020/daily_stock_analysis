@@ -53,13 +53,17 @@ jobs:
           # ==========================================
           # AI 配置
           # ==========================================
-          # Gemini AI（主选）
+          # NVIDIA NIM 免费模型（首选）
+          NIM_API_KEY: ${{ secrets.NIM_API_KEY }}
+          NIM_MODEL: ${{ vars.NIM_MODEL || secrets.NIM_MODEL || 'meta/llama-3.1-8b-instruct' }}
+
+          # Gemini AI（备选）
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL || 'gemini-2.5-flash' }}
           GEMINI_MODEL_FALLBACK: ${{ vars.GEMINI_MODEL_FALLBACK || secrets.GEMINI_MODEL_FALLBACK || 'gemini-2.0-flash' }}
           GEMINI_REQUEST_DELAY: '3.0'
-          
-          # OpenAI 兼容 API（备选）
+
+          # OpenAI 兼容 API（最后备选）
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL || secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || secrets.OPENAI_MODEL }}
@@ -153,6 +157,7 @@ jobs:
           echo "📋 配置检查"
           echo "=========================================="
           echo "【AI 配置】"
+          echo "  NVIDIA NIM Key: $([ -n "$NIM_API_KEY" ] && echo '✅ 已配置' || echo '⚪ 未配置')"
           echo "  Gemini API Key: $([ -n "$GEMINI_API_KEY" ] && echo '✅ 已配置' || echo '❌ 未配置')"
           echo "  OpenAI API Key: $([ -n "$OPENAI_API_KEY" ] && echo '✅ 已配置' || echo '⚪ 未配置')"
           echo ""

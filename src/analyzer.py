@@ -436,24 +436,43 @@ class GeminiAnalyzer:
         self._using_fallback = False  # 是否正在使用备选模型
         self._use_openai = False  # 是否使用 OpenAI 兼容 API
         self._openai_client = None  # OpenAI 客户端
-        
-        # 检查 Gemini API Key 是否有效（过滤占位符）
+        self._use_nim = False  # 是否使用 NVIDIA NIM
+        self._nim_client = None  # NVIDIA NIM 客户端
+
+        # 检查 API Key 有效性（过滤占位符）
+        nim_key_valid = (
+            config.nim_api_key and
+            not config.nim_api_key.startswith('your_') and
+            len(config.nim_api_key) > 10
+        )
         gemini_key_valid = self._api_key and not self._api_key.startswith('your_') and len(self._api_key) > 10
-        
-        # 优先尝试初始化 Gemini
-        if gemini_key_valid:
+
+        # 优先级：NVIDIA NIM（免费）> Gemini > OpenAI 兼容 API
+        if nim_key_valid:
+            if not self._init_nim():
+                # NIM 不可用，尝试 Gemini
+                if gemini_key_valid:
+                    try:
+                        self._init_model()
+                    except Exception as e:
+                        logger.warning(f"Gemini 初始化失败: {e}，尝试 OpenAI 兼容 API")
+                        self._init_openai_fallback()
+                else:
+                    logger.info("NIM 不可用，Gemini 未配置，尝试 OpenAI 兼容 API")
+                    self._init_openai_fallback()
+        elif gemini_key_valid:
             try:
                 self._init_model()
             except Exception as e:
                 logger.warning(f"Gemini 初始化失败: {e}，尝试 OpenAI 兼容 API")
                 self._init_openai_fallback()
         else:
-            # Gemini Key 未配置，尝试 OpenAI
-            logger.info("Gemini API Key 未配置，尝试使用 OpenAI 兼容 API")
+            # NIM 和 Gemini 都未配置，尝试 OpenAI
+            logger.info("NVIDIA NIM 和 Gemini 都未配置，尝试使用 OpenAI 兼容 API")
             self._init_openai_fallback()
-        
-        # 两者都未配置
-        if not self._model and not self._openai_client:
+
+        # 三者都未配置
+        if not self._nim_client and not self._model and not self._openai_client:
             logger.warning("未配置任何 AI API Key，AI 分析功能将不可用")
     
     def _init_openai_fallback(self) -> None:
@@ -508,7 +527,51 @@ class GeminiAnalyzer:
                 logger.error(f"OpenAI 代理配置错误: {e}，如使用 SOCKS 代理请运行: pip install httpx[socks]")
             else:
                 logger.error(f"OpenAI 兼容 API 初始化失败: {e}")
-    
+
+    def _init_nim(self) -> bool:
+        """
+        初始化 NVIDIA NIM 免费模型（OpenAI 兼容 API）
+
+        NVIDIA NIM 提供免费推理额度，支持 Llama、Mistral、Nemotron 等开源模型。
+        API 地址：https://integrate.api.nvidia.com/v1
+        免费注册：https://build.nvidia.com
+
+        Returns:
+            是否初始化成功
+        """
+        config = get_config()
+
+        # 检查 NVIDIA NIM API Key 是否有效
+        nim_key_valid = (
+            config.nim_api_key and
+            not config.nim_api_key.startswith('your_') and
+            len(config.nim_api_key) > 10
+        )
+
+        if not nim_key_valid:
+            logger.debug("NVIDIA NIM API Key 未配置或配置无效")
+            return False
+
+        try:
+            from openai import OpenAI
+        except ImportError:
+            logger.error("未安装 openai 库，请运行: pip install openai")
+            return False
+
+        try:
+            self._nim_client = OpenAI(
+                api_key=config.nim_api_key,
+                base_url="https://integrate.api.nvidia.com/v1",
+            )
+            self._nim_model = config.nim_model
+            self._use_nim = True
+            self._current_model_name = config.nim_model
+            logger.info(f"NVIDIA NIM 初始化成功 (模型: {config.nim_model})")
+            return True
+        except Exception as e:
+            logger.error(f"NVIDIA NIM 初始化失败: {e}")
+            return False
+
     def _init_model(self) -> None:
         """
         初始化 Gemini 模型
@@ -582,7 +645,7 @@ class GeminiAnalyzer:
     
     def is_available(self) -> bool:
         """检查分析器是否可用"""
-        return self._model is not None or self._openai_client is not None
+        return self._model is not None or self._nim_client is not None or self._openai_client is not None
     
     def _call_openai_api(self, prompt: str, generation_config: dict) -> str:
         """
@@ -636,28 +699,114 @@ class GeminiAnalyzer:
                     raise
         
         raise Exception("OpenAI API 调用失败，已达最大重试次数")
-    
-    def _call_api_with_retry(self, prompt: str, generation_config: dict) -> str:
+
+    def _call_nim_api(self, prompt: str, generation_config: dict) -> str:
         """
-        调用 AI API，带有重试和模型切换机制
-        
-        优先级：Gemini > Gemini 备选模型 > OpenAI 兼容 API
-        
-        处理 429 限流错误：
-        1. 先指数退避重试
-        2. 多次失败后切换到备选模型
-        3. Gemini 完全失败后尝试 OpenAI
-        
+        调用 NVIDIA NIM API（OpenAI 兼容格式）
+
         Args:
             prompt: 提示词
             generation_config: 生成配置
-            
+
         Returns:
             响应文本
         """
+        config = get_config()
+        max_retries = config.gemini_max_retries
+        base_delay = config.gemini_retry_delay
+
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    delay = base_delay * (2 ** (attempt - 1))
+                    delay = min(delay, 60)
+                    logger.info(f"[NIM] 第 {attempt + 1} 次重试，等待 {delay:.1f} 秒...")
+                    time.sleep(delay)
+
+                config = get_config()
+                response = self._nim_client.chat.completions.create(
+                    model=self._nim_model,
+                    messages=[
+                        {"role": "system", "content": self.SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=generation_config.get('temperature', config.nim_temperature),
+                    max_tokens=generation_config.get('max_output_tokens', 8192),
+                )
+
+                if response and response.choices and response.choices[0].message.content:
+                    return response.choices[0].message.content
+                else:
+                    raise ValueError("NVIDIA NIM API 返回空响应")
+
+            except Exception as e:
+                error_str = str(e)
+                is_rate_limit = '429' in error_str or 'rate' in error_str.lower() or 'quota' in error_str.lower()
+
+                if is_rate_limit:
+                    logger.warning(f"[NIM] API 限流，第 {attempt + 1}/{max_retries} 次尝试: {error_str[:100]}")
+                else:
+                    logger.warning(f"[NIM] API 调用失败，第 {attempt + 1}/{max_retries} 次尝试: {error_str[:100]}")
+
+                if attempt == max_retries - 1:
+                    raise
+
+        raise Exception("NVIDIA NIM API 调用失败，已达最大重试次数")
+
+    def _call_api_with_retry(self, prompt: str, generation_config: dict) -> str:
+        """
+        调用 AI API，带有重试和模型切换机制
+
+        优先级：NVIDIA NIM（免费）> Gemini > OpenAI 兼容 API
+
+        处理 429 限流错误：
+        1. 先指数退避重试
+        2. 当前模型失败后按优先级链依次尝试下一个
+
+        Args:
+            prompt: 提示词
+            generation_config: 生成配置
+
+        Returns:
+            响应文本
+        """
+        # 如果已经在使用 NIM 模式，调用 NIM，失败后按优先级尝试 Gemini 和 OpenAI
+        if self._use_nim:
+            config = get_config()
+            try:
+                return self._call_nim_api(prompt, generation_config)
+            except Exception as nim_error:
+                logger.warning("[NIM] 调用失败，按优先级尝试 Gemini")
+                # 如果还没初始化 Gemini，尝试懒加载
+                if not self._model:
+                    gemini_key = config.gemini_api_key or ''
+                    if gemini_key and not gemini_key.startswith('your_') and len(gemini_key) > 10:
+                        self._api_key = gemini_key
+                        try:
+                            self._init_model()
+                        except Exception as e:
+                            logger.warning(f"[NIM] Gemini 懒加载失败: {e}")
+                if self._model:
+                    pass  # 继续走下面的 Gemini 重试流程
+                else:
+                    # Gemini 不可用，直接尝试 OpenAI
+                    logger.warning("[NIM] Gemini 不可用，尝试 OpenAI")
+                    if self._openai_client:
+                        try:
+                            return self._call_openai_api(prompt, generation_config)
+                        except Exception as openai_error:
+                            logger.error(f"[OpenAI] 备选 API 也失败: {openai_error}")
+                            raise nim_error or openai_error
+                    else:
+                        raise nim_error
+
         # 如果已经在使用 OpenAI 模式，直接调用 OpenAI
         if self._use_openai:
             return self._call_openai_api(prompt, generation_config)
+
+        # 如果当前是 NIM 失败后降级到 Gemini，但 self._model 仍为 None，直接报错
+        if self._use_nim and not self._model:
+            raise RuntimeError("NIM 调用失败且 Gemini 不可用，无可用 AI 模型")
         
         config = get_config()
         max_retries = config.gemini_max_retries
@@ -707,9 +856,27 @@ class GeminiAnalyzer:
                     # 非限流错误，记录并继续重试
                     logger.warning(f"[Gemini] API 调用失败，第 {attempt + 1}/{max_retries} 次尝试: {error_str[:100]}")
         
-        # Gemini 所有重试都失败，尝试 OpenAI 兼容 API
+        # Gemini 所有重试都失败，优先尝试 NVIDIA NIM，其次 OpenAI
+        if self._nim_client:
+            logger.warning("[Gemini] 所有重试失败，切换到 NVIDIA NIM")
+            try:
+                return self._call_nim_api(prompt, generation_config)
+            except Exception as nim_error:
+                logger.error(f"[NIM] 备选 API 也失败: {nim_error}")
+                # 继续尝试 OpenAI
+        elif config.nim_api_key and not config.nim_api_key.startswith('your_') and len(config.nim_api_key) > 10:
+            # 尝试懒加载初始化 NIM
+            logger.warning("[Gemini] 所有重试失败，尝试初始化 NVIDIA NIM")
+            if self._init_nim():
+                try:
+                    return self._call_nim_api(prompt, generation_config)
+                except Exception as nim_error:
+                    logger.error(f"[NIM] 备选 API 也失败: {nim_error}")
+                    # 继续尝试 OpenAI
+
+        # NIM 也失败，尝试 OpenAI 兼容 API
         if self._openai_client:
-            logger.warning("[Gemini] 所有重试失败，切换到 OpenAI 兼容 API")
+            logger.warning("[Gemini/NIM] 所有重试失败，切换到 OpenAI 兼容 API")
             try:
                 return self._call_openai_api(prompt, generation_config)
             except Exception as openai_error:
@@ -717,7 +884,7 @@ class GeminiAnalyzer:
                 raise last_error or openai_error
         elif config.openai_api_key and config.openai_base_url:
             # 尝试懒加载初始化 OpenAI
-            logger.warning("[Gemini] 所有重试失败，尝试初始化 OpenAI 兼容 API")
+            logger.warning("[Gemini/NIM] 所有重试失败，尝试初始化 OpenAI 兼容 API")
             self._init_openai_fallback()
             if self._openai_client:
                 try:
@@ -725,7 +892,7 @@ class GeminiAnalyzer:
                 except Exception as openai_error:
                     logger.error(f"[OpenAI] 备选 API 也失败: {openai_error}")
                     raise last_error or openai_error
-        
+
         # 所有方式都失败
         raise last_error or Exception("所有 AI API 调用失败，已达最大重试次数")
     

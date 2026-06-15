@@ -20,14 +20,15 @@ English | [简体中文](../README.md)
 - **Market Review** - Daily market overview, sector performance, northbound capital flow
 - **Multi-channel Push** - Support WeChat Work, Feishu, Telegram, Email (auto-detection)
 - **Zero-cost Deployment** - Free to run on GitHub Actions, no server required
-- **💰 Free Gemini API** - Google AI Studio provides free quota, sufficient for personal use
-- **🔄 Multi-model Support** - Supports OpenAI-compatible APIs (DeepSeek, Qwen, etc.) as backup
+- **💰 Free AI Models** - NVIDIA NIM free models + Google Gemini free quota, no cost for personal use
+- **🔄 Multi-model Support** - Priority: NVIDIA NIM > Gemini > OpenAI-compatible API
 
 ### 📊 Data Sources
 - **Market Data**: AkShare (free), Tushare, Baostock, YFinance
 - **News Search**: Tavily, SerpAPI, Bocha
-- **AI Analysis**: 
-  - Primary: Google Gemini (gemini-3-flash-preview) — [Get it free](https://aistudio.google.com/)
+- **AI Analysis**:
+  - Primary: NVIDIA NIM free models (Llama 3.1 8B, etc.) — [Get it free](https://build.nvidia.com)
+  - Secondary: Google Gemini (gemini-3-flash-preview) — [Get it free](https://aistudio.google.com/)
   - Backup: OpenAI-compatible API (DeepSeek, Qwen, Moonshot, etc.)
 
 ### 🌍 Supported Markets
@@ -55,16 +56,18 @@ Click the `Fork` button in the upper right corner
 
 Go to your forked repo → `Settings` → `Secrets and variables` → `Actions` → `New repository secret`
 
-**AI Model Configuration (Choose one)**
+**AI Model Configuration (Choose one, priority: NIM > Gemini > OpenAI)**
 
 | Secret Name | Description | Required |
 |------------|------|:----:|
+| `NIM_API_KEY` | Get free API key from [NVIDIA NIM](https://build.nvidia.com) (recommended) | ✅* |
+| `NIM_MODEL` | Model name (default: `meta/llama-3.1-8b-instruct`) | Optional |
 | `GEMINI_API_KEY` | Get free API key from [Google AI Studio](https://aistudio.google.com/) | ✅* |
 | `OPENAI_API_KEY` | OpenAI-compatible API Key (supports DeepSeek, Qwen, etc.) | Optional |
 | `OPENAI_BASE_URL` | OpenAI-compatible API endpoint (e.g., `https://api.deepseek.com/v1`) | Optional |
 | `OPENAI_MODEL` | Model name (e.g., `deepseek-chat`) | Optional |
 
-> *Note: Configure at least one of `GEMINI_API_KEY` or `OPENAI_API_KEY`
+> *Note: Configure at least one of `NIM_API_KEY`, `GEMINI_API_KEY` or `OPENAI_API_KEY`
 
 **Notification Channel Configuration (Can configure multiple, all will receive notifications)**
 
@@ -150,7 +153,8 @@ Configure the following:
 
 ```bash
 # AI Model (Choose one)
-GEMINI_API_KEY=your_gemini_api_key_here
+NIM_API_KEY=your_nim_api_key_here
+# GEMINI_API_KEY=your_gemini_api_key_here
 
 # Stock Watchlist (Mixed markets supported)
 STOCK_LIST=600519,AAPL,hk00700
@@ -373,6 +377,7 @@ The developers of this tool are not liable for any financial losses resulting fr
 ## 🙏 Acknowledgments
 
 - [AkShare](https://github.com/akfamily/akshare) - Stock data source
+- [NVIDIA NIM](https://build.nvidia.com) - Free AI models (Llama 3.1, Mistral, etc.)
 - [Google Gemini](https://ai.google.dev/) - AI analysis engine
 - [Tavily](https://tavily.com/) - News search API
 - All contributors who helped improve this project

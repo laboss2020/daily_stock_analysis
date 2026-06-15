@@ -210,6 +210,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BASE_REF: ${{ github.base_ref || 'main' }}
+          NIM_API_KEY: ${{ secrets.NIM_API_KEY }}
+          NIM_MODEL: ${{ vars.NIM_MODEL || secrets.NIM_MODEL || 'meta/llama-3.1-8b-instruct' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL_FALLBACK: ${{ vars.GEMINI_MODEL_FALLBACK || 'gemini-2.5-flash' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

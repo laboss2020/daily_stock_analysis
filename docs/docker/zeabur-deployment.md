@@ -20,7 +20,7 @@
 - Zeabur 账号
 - GitHub 账号（用于连接仓库）
 - Discord 开发者账号（如需部署机器人）
-- 相关 API 密钥（如 Gemini API Key、搜索服务 API Key 等）
+- 相关 API 密钥（如 NVIDIA NIM API Key、Gemini API Key、搜索服务 API Key 等）
 
 ### 1.2 仓库准备
 
@@ -135,7 +135,10 @@ Zeabur 会自动检测 `.github/workflows/docker-publish.yml` 文件，并使用
 
 | 变量名 | 说明 |
 |--------|------|
+| `NIM_API_KEY` | NVIDIA NIM API 密钥（免费） |
+| `NIM_MODEL` | NIM 模型（默认 `meta/llama-3.1-8b-instruct`） |
 | `GEMINI_API_KEY` | Gemini API 密钥 |
+| `OPENAI_API_KEY` | OpenAI 兼容 API Key |
 | `BOCHA_API_KEYS` | Bocha API 密钥（用逗号分隔） |
 | `TAVILY_API_KEYS` | Tavily API 密钥（用逗号分隔） |
 | `SERPAPI_KEYS` | SerpAPI 密钥（用逗号分隔） |

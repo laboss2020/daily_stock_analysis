@@ -20,15 +20,17 @@
 - **大盘复盘** - 每日市场概览、板块涨跌、北向资金
 - **多渠道推送** - 支持企业微信、飞书、Telegram、邮件（自动识别）
 - **零成本部署** - GitHub Actions 免费运行，无需服务器
-- **💰 白嫖 Gemini API** - Google AI Studio 提供免费额度，个人使用完全够用
+- **💰 免费 AI 模型** - 支持 NVIDIA NIM 免费模型、Google Gemini 免费额度
 - **🔄 多模型支持** - 支持 OpenAI 兼容 API（DeepSeek、通义千问等）作为备选
+- **优先级**: NVIDIA NIM > Gemini > OpenAI
 
 ### 📊 数据来源
 - **行情数据**: AkShare（免费）、Tushare、Baostock、YFinance
 - **新闻搜索**: Tavily、SerpAPI、Bocha
-- **AI 分析**: 
+- **AI 分析**:
+  - 首选：NVIDIA NIM 免费模型（Llama 3.1 8B 等）—— [免费获取](https://build.nvidia.com)
   - 主力：Google Gemini（gemini-3-flash-preview）—— [免费获取](https://aistudio.google.com/)
-  - 备选：应大家要求，也支持了OpenAI 兼容 API（DeepSeek、通义千问、Moonshot 等）
+  - 备选：OpenAI 兼容 API（DeepSeek、通义千问、Moonshot 等）
 
 ### 🛡️ 交易理念内置
 - ❌ **严禁追高** - 乖离率 > 5% 自动标记「危险」
@@ -50,16 +52,18 @@
 
 进入你 Fork 的仓库 → `Settings` → `Secrets and variables` → `Actions` → `New repository secret`
 
-**AI 模型配置（二选一）**
+**AI 模型配置（三选一，优先级：NIM > Gemini > OpenAI）**
 
 | Secret 名称 | 说明 | 必填 |
 |------------|------|:----:|
+| `NIM_API_KEY` | [NVIDIA NIM](https://build.nvidia.com) 免费 API Key（推荐） | ✅* |
+| `NIM_MODEL` | 模型名称（默认 `meta/llama-3.1-8b-instruct`） | 可选 |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/) 获取免费 Key | ✅* |
-| `OPENAI_API_KEY` | OpenAI 兼容 API Key（支持 DeepSeek、通义千问等） | 可选 |
+| `OPENAI_API_KEY` | OpenAI 兼容 API Key（DeepSeek、通义千问等） | 可选 |
 | `OPENAI_BASE_URL` | OpenAI 兼容 API 地址（如 `https://api.deepseek.com/v1`） | 可选 |
 | `OPENAI_MODEL` | 模型名称（如 `deepseek-chat`） | 可选 |
 
-> *注：`GEMINI_API_KEY` 和 `OPENAI_API_KEY` 至少配置一个
+> *注：`NIM_API_KEY`、`GEMINI_API_KEY` 和 `OPENAI_API_KEY` 至少配置一个
 
 **通知渠道配置（可同时配置多个，全部推送）**
 
@@ -220,6 +224,7 @@ daily_stock_analysis/
 - [x] iOS/Android 推送（Pushover）
 - [x] 钉钉机器人 （已支持命令交互 >> [相关配置](docs/bot/dingding-bot-config.md)）
 ### 🤖 AI 模型支持
+- [x] NVIDIA NIM 免费模型（Llama 3.1 8B、Mistral 7B、Nemotron 8B 等，免费额度）
 - [x] Google Gemini（主力，免费额度）
 - [x] OpenAI 兼容 API（支持 GPT-4/DeepSeek/通义千问/Claude/文心一言 等）
 - [x] 本地模型（Ollama）

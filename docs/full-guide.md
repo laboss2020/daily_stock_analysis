@@ -32,16 +32,18 @@
   <img src="../sources/secret_config.png" alt="GitHub Secrets 配置示意图" width="600">
 </div>
 
-#### AI 模型配置（二选一）
+#### AI 模型配置（三选一，优先级：NIM > Gemini > OpenAI）
 
 | Secret 名称 | 说明 | 必填 |
 |------------|------|:----:|
+| `NIM_API_KEY` | [NVIDIA NIM](https://build.nvidia.com) 免费 API Key（推荐） | ✅* |
+| `NIM_MODEL` | 模型名称（默认 `meta/llama-3.1-8b-instruct`） | 可选 |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/) 获取免费 Key | ✅* |
 | `OPENAI_API_KEY` | OpenAI 兼容 API Key（支持 DeepSeek、通义千问等） | 可选 |
 | `OPENAI_BASE_URL` | OpenAI 兼容 API 地址（如 `https://api.deepseek.com/v1`） | 可选 |
 | `OPENAI_MODEL` | 模型名称（如 `deepseek-chat`） | 可选 |
 
-> *注：`GEMINI_API_KEY` 和 `OPENAI_API_KEY` 至少配置一个
+> *注：`NIM_API_KEY`、`GEMINI_API_KEY` 和 `OPENAI_API_KEY` 至少配置一个
 
 #### 通知渠道配置（可同时配置多个，全部推送）
 
@@ -85,7 +87,7 @@
 
 如果你想快速开始，最少需要配置以下项：
 
-1. **AI 模型**：`GEMINI_API_KEY`（推荐）或 `OPENAI_API_KEY`
+1. **AI 模型**：`NIM_API_KEY`（推荐）或 `GEMINI_API_KEY` 或 `OPENAI_API_KEY`
 2. **通知渠道**：至少配置一个，如 `WECHAT_WEBHOOK_URL` 或 `EMAIL_SENDER` + `EMAIL_PASSWORD`
 3. **股票列表**：`STOCK_LIST`（必填）
 4. **搜索 API**：`TAVILY_API_KEYS`（强烈推荐，用于新闻搜索）
@@ -118,6 +120,8 @@
 
 | 变量名 | 说明 | 默认值 | 必填 |
 |--------|------|--------|:----:|
+| `NIM_API_KEY` | NVIDIA NIM 免费 API Key | - | ✅* |
+| `NIM_MODEL` | NIM 模型名称 | `meta/llama-3.1-8b-instruct` | 否 |
 | `GEMINI_API_KEY` | Google Gemini API Key | - | ✅* |
 | `GEMINI_MODEL` | 主模型名称 | `gemini-3-flash-preview` | 否 |
 | `GEMINI_MODEL_FALLBACK` | 备选模型 | `gemini-2.5-flash` | 否 |
@@ -125,7 +129,7 @@
 | `OPENAI_BASE_URL` | OpenAI 兼容 API 地址 | - | 可选 |
 | `OPENAI_MODEL` | OpenAI 模型名称 | `gpt-4o` | 可选 |
 
-> *注：`GEMINI_API_KEY` 和 `OPENAI_API_KEY` 至少配置一个
+> *注：`NIM_API_KEY`、`GEMINI_API_KEY` 和 `OPENAI_API_KEY` 至少配置一个
 
 ### 通知渠道配置
 
@@ -474,14 +478,18 @@ STOCK_LIST=600519,hk00700,hk01810
 
 ### 多模型切换
 
-配置多个模型，系统自动切换：
+配置多个模型，系统按优先级自动切换（NVIDIA NIM > Gemini > OpenAI）：
 
 ```bash
-# Gemini（主力）
+# NVIDIA NIM（首选，免费）
+NIM_API_KEY=xxx
+NIM_MODEL=meta/llama-3.1-8b-instruct
+
+# Gemini（备选）
 GEMINI_API_KEY=xxx
 GEMINI_MODEL=gemini-3-flash-preview
 
-# OpenAI 兼容（备选）
+# OpenAI 兼容（最后备选）
 OPENAI_API_KEY=xxx
 OPENAI_BASE_URL=https://api.deepseek.com/v1
 OPENAI_MODEL=deepseek-chat

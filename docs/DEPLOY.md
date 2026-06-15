@@ -184,7 +184,8 @@ journalctl -u stock-analyzer -f
 
 | 配置项 | 说明 | 获取方式 |
 |--------|------|----------|
-| `GEMINI_API_KEY` | AI 分析必需 | [Google AI Studio](https://aistudio.google.com/) |
+| `NIM_API_KEY` | AI 分析（首选，免费） | [NVIDIA NIM](https://build.nvidia.com) |
+| `GEMINI_API_KEY` | AI 分析（备选，免费） | [Google AI Studio](https://aistudio.google.com/) |
 | `STOCK_LIST` | 自选股列表 | 逗号分隔的股票代码 |
 | `WECHAT_WEBHOOK_URL` | 微信推送 | 企业微信群机器人 |
 
@@ -201,7 +202,7 @@ journalctl -u stock-analyzer -f
 
 ## 🌐 代理配置
 
-如果服务器在国内，访问 Gemini API 需要代理：
+如果服务器在国内，访问 Gemini / NVIDIA NIM API 可能需要代理：
 
 ### Docker 方式
 
@@ -267,7 +268,7 @@ docker-compose -f ./docker/docker-compose.yml build --no-cache
 
 ### 2. API 访问超时
 
-检查代理配置，确保服务器能访问 Gemini API。
+检查代理配置，确保服务器能访问 Gemini / NVIDIA NIM API。
 
 ### 3. 数据库锁定
 
@@ -348,7 +349,8 @@ git push -u origin main
 
 | Secret 名称 | 说明 | 必填 |
 |------------|------|------|
-| `GEMINI_API_KEY` | Gemini AI API Key | ✅ |
+| `NIM_API_KEY` | NVIDIA NIM AI API Key（免费） | ✅* |
+| `GEMINI_API_KEY` | Gemini AI API Key | ✅* |
 | `WECHAT_WEBHOOK_URL` | 企业微信机器人 Webhook | 可选* |
 | `FEISHU_WEBHOOK_URL` | 飞书机器人 Webhook | 可选* |
 | `TELEGRAM_BOT_TOKEN` | Telegram Bot Token | 可选* |
@@ -360,6 +362,7 @@ git push -u origin main
 | `TAVILY_API_KEYS` | Tavily 搜索 API Key | 推荐 |
 | `SERPAPI_API_KEYS` | SerpAPI Key | 可选 |
 | `TUSHARE_TOKEN` | Tushare Token | 可选 |
+| `NIM_MODEL` | NIM 模型（默认 meta/llama-3.1-8b-instruct） | 可选 |
 | `GEMINI_MODEL` | 模型名称（默认 gemini-2.0-flash） | 可选 |
 
 > *注：通知渠道至少配置一个，支持多渠道同时推送
